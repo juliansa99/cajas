@@ -181,8 +181,8 @@ function localStore(){
 }
 
 (async()=>{
-  render();
   store = localStore();            // usable immediately
+  render();
   let db=null;
   try{ db = await (window.claude && window.claude.use('db')); }catch(e){}
   if(!db) return;
