@@ -171,7 +171,7 @@ $('q').addEventListener('input',render);
 
 /* Storage: shared db if available, otherwise this browser only */
 function localStore(){
-  const K='cajas-101';
+  const K='cajas-101-v2';
   const SEED=[[1,'Juli','Ofi'],[2,'Dami','Ofi'],[3,'Galo','Ofi'],[4,'Tomi','Ofi'],[5,'Fede','Ofi'],[6,'Braca','Ofi'],[7,'Leo','Ofi'],[8,'Ale Bufano','Libertador'],[9,'Pablo Colman','Goyena'],[10,'Fenix Manu Nico','Manuel Ugarte']]
     .map(([n,nombre,calle])=>({id:'s'+n,n,nombre,calle,ts:1764100000000+n}));
   try{ const raw=localStorage.getItem(K); items = raw===null ? SEED : JSON.parse(raw); }catch(e){ items=SEED; }
