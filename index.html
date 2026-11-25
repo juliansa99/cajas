@@ -1,0 +1,201 @@
+<title>Reparto de Cajas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: contador grande arriba, formulario, grilla de 101 cajas, lista con borrar */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --fg:#17212b; --muted:#5d6b79; --line:#d9dfe5;
+  --accent:#1f5fbf; --accent-fg:#ffffff; --warn-bg:#fff1d6; --warn-line:#e0a100; --warn-fg:#5a4000;
+  --danger:#b3261e; --box-empty:#e3e8ed; --box-full:#1f5fbf;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-head:'Space Grotesk','Inter',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f161d; --surface:#18222c; --fg:#e8eef4; --muted:#93a2b1; --line:#2a3744;
+  --accent:#6aa5ff; --accent-fg:#0b1a2e; --warn-bg:#3a2e0b; --warn-line:#d9a520; --warn-fg:#ffe6a3;
+  --danger:#ff8a80; --box-empty:#253240; --box-full:#6aa5ff; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f161d; --surface:#18222c; --fg:#e8eef4; --muted:#93a2b1; --line:#2a3744;
+  --accent:#6aa5ff; --accent-fg:#0b1a2e; --warn-bg:#3a2e0b; --warn-line:#d9a520; --warn-fg:#ffe6a3;
+  --danger:#ff8a80; --box-empty:#253240; --box-full:#6aa5ff; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.4;
+  padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-family:var(--font-head);font-size:1.1rem;margin:0;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.count{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.count .big{font-family:var(--font-head);font-size:4.5rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.count .sub{color:var(--muted);font-size:1rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+form{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);font-weight:600;min-width:0}
+input{font:inherit;font-size:1rem;padding:11px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);min-width:0;width:100%}
+input:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+button{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:11px 16px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.alert{margin-top:12px;background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn-fg);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.alert strong{font-weight:700}
+.alert .row{display:flex;gap:8px;flex-wrap:wrap}
+.note{margin-top:8px;font-size:.85rem;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(14px,1fr));gap:4px}
+.grid i{aspect-ratio:1;border-radius:3px;background:var(--box-empty);display:block}
+.grid i.on{background:var(--box-full)}
+.list-head{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:10px}
+.list-head input{max-width:240px}
+ul{list-style:none;margin:0;padding:0}
+li{display:grid;grid-template-columns:3.2rem 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+li:first-child{border-top:0}
+.num{font-family:var(--font-head);font-weight:700;font-size:1.1rem;color:var(--accent);font-variant-numeric:tabular-nums}
+.who{min-width:0}.who b{display:block;overflow-wrap:anywhere}.who span{color:var(--muted);font-size:.9rem;overflow-wrap:anywhere}
+li button{padding:7px 12px;font-size:.9rem}
+li button.del{color:var(--danger)}
+li button.sure{background:var(--danger);border-color:var(--danger);color:#fff}
+li.hl{background:var(--warn-bg)}
+.empty{color:var(--muted);padding:12px 0}
+.full{background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn-fg);padding:10px 12px;border-radius:8px;font-weight:600}
+@media (max-width:560px){form{grid-template-columns:1fr}.count .big{font-size:3.6rem}}
+@media (prefers-reduced-motion:no-preference){.grid i{transition:background .2s}}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@600;700&display=swap">
+
+<div class="wrap">
+  <header>
+    <h1>Reparto de cajas</h1>
+    <div class="count"><span class="big" id="left">101</span><span class="sub" id="sub">cajas disponibles de 101</span></div>
+  </header>
+
+  <section class="card">
+    <form id="f" autocomplete="off">
+      <label for="nombre">Cliente<input id="nombre" required placeholder="Nombre y apellido"></label>
+      <label for="calle">Calle<input id="calle" required placeholder="Calle y número"></label>
+      <button class="primary" id="add" type="submit">Cargar</button>
+    </form>
+    <div id="alert" hidden></div>
+    <div id="full" class="full" hidden style="margin-top:12px">Ya entregaste las 101 cajas.</div>
+    <div class="note" id="status"></div>
+  </section>
+
+  <section class="card" aria-label="Mapa de cajas"><div class="grid" id="grid"></div></section>
+
+  <section class="card">
+    <div class="list-head">
+      <strong id="listTitle">Entregadas</strong>
+      <input id="q" type="search" placeholder="Buscar cliente o calle" aria-label="Buscar">
+    </div>
+    <ul id="list"></ul>
+  </section>
+</div>
+
+<script>
+const TOTAL = 101;
+let items = [];            // {id, n, nombre, calle, ts}
+let store = null;          // {save(item), remove(id)}
+let pendingDup = null;     // item waiting for confirmation
+let confirmDel = null;
+let highlight = null;
+const $ = id => document.getElementById(id);
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+
+function nextNumber(){
+  const used = new Set(items.map(i=>i.n));
+  for(let n=1;n<=TOTAL;n++) if(!used.has(n)) return n;
+  return null;
+}
+
+function render(){
+  const left = TOTAL - items.length;
+  $('left').textContent = left;
+  $('sub').textContent = left === 1 ? 'caja disponible de 101' : 'cajas disponibles de 101';
+  $('full').hidden = left > 0;
+  $('add').disabled = left <= 0;
+
+  const used = new Set(items.map(i=>i.n));
+  const g = $('grid'); g.textContent='';
+  for(let n=1;n<=TOTAL;n++){ const el=document.createElement('i'); if(used.has(n)){el.className='on'; el.title='Caja '+n;} g.appendChild(el); }
+
+  const q = norm($('q').value);
+  const rows = items.slice().sort((a,b)=>b.ts-a.ts).filter(i=>!q || norm(i.nombre).includes(q) || norm(i.calle).includes(q));
+  $('listTitle').textContent = 'Entregadas (' + items.length + ')';
+  const ul = $('list'); ul.textContent='';
+  if(!rows.length){ const d=document.createElement('div'); d.className='empty'; d.textContent = items.length ? 'No hay resultados.' : 'Todavía no cargaste ninguna entrega.'; ul.appendChild(d); return; }
+  for(const it of rows){
+    const li=document.createElement('li'); if(it.id===highlight) li.className='hl';
+    const num=document.createElement('span'); num.className='num'; num.textContent='#'+it.n;
+    const who=document.createElement('div'); who.className='who';
+    const b=document.createElement('b'); b.textContent=it.nombre;
+    const s=document.createElement('span'); s.textContent=it.calle;
+    who.append(b,s);
+    const btn=document.createElement('button');
+    if(confirmDel===it.id){ btn.className='sure'; btn.textContent='Confirmar borrar'; btn.onclick=()=>{confirmDel=null; store.remove(it.id)}; }
+    else { btn.className='del'; btn.textContent='Borrar'; btn.onclick=()=>{confirmDel=it.id; render(); setTimeout(()=>{ if(confirmDel===it.id){confirmDel=null; render();} },4000)}; }
+    li.append(num,who,btn); ul.appendChild(li);
+  }
+}
+
+function showAlert(dups, item){
+  const a=$('alert'); a.textContent=''; a.hidden=false; a.className='alert';
+  const t=document.createElement('div');
+  const st=document.createElement('strong'); st.textContent='Ojo, este cliente ya figura. ';
+  t.appendChild(st);
+  t.append(dups.map(d=>d.nombre+' en '+d.calle+' (caja #'+d.n+')').join('; ')+'.');
+  const row=document.createElement('div'); row.className='row';
+  const ok=document.createElement('button'); ok.className='primary'; ok.type='button'; ok.textContent='Cargar igual';
+  ok.onclick=()=>commit(item);
+  const no=document.createElement('button'); no.type='button'; no.textContent='Cancelar';
+  no.onclick=()=>{a.hidden=true; pendingDup=null; highlight=null; render()};
+  row.append(ok,no); a.append(t,row);
+  highlight = dups[0].id; render();
+}
+
+async function commit(item){
+  $('alert').hidden=true; pendingDup=null; highlight=null;
+  const n = nextNumber();
+  if(n===null) return;
+  item.n = n; item.id = item.id || ('c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)); item.ts = Date.now();
+  try{ await store.save(item); $('f').reset(); $('nombre').focus(); }
+  catch(e){ $('status').textContent='No se pudo guardar. Probá de nuevo.'; }
+}
+
+$('f').addEventListener('submit', e=>{
+  e.preventDefault();
+  if(items.length>=TOTAL) return;
+  const nombre=$('nombre').value.trim(), calle=$('calle').value.trim();
+  if(!nombre||!calle) return;
+  const item={nombre,calle};
+  const dups = items.filter(i=>norm(i.nombre)===norm(nombre));
+  if(dups.length){ pendingDup=item; showAlert(dups,item); return; }
+  commit(item);
+});
+$('nombre').addEventListener('input',()=>{ if(pendingDup){ $('alert').hidden=true; pendingDup=null; highlight=null; render(); }});
+$('q').addEventListener('input',render);
+
+/* Storage: shared db if available, otherwise this browser only */
+function localStore(){
+  const K='cajas-101';
+  try{ items = JSON.parse(localStorage.getItem(K)||'[]'); }catch(e){ items=[]; }
+  const persist=()=>{ try{localStorage.setItem(K,JSON.stringify(items))}catch(e){} render(); };
+  $('status').textContent='Guardado solo en este navegador.';
+  return { save: async it=>{ items.push(it); persist(); }, remove: async id=>{ items=items.filter(i=>i.id!==id); persist(); } };
+}
+
+(async()=>{
+  render();
+  store = localStore();            // usable immediately
+  let db=null;
+  try{ db = await (window.claude && window.claude.use('db')); }catch(e){}
+  if(!db) return;
+  const col = db.collection('cajas');
+  let timer=setTimeout(()=>{ $('status').textContent='Guardado solo en este navegador.'; },10000);
+  $('status').textContent='Conectando…';
+  store = {
+    save: it=>col.doc(it.id).set({n:it.n,nombre:it.nombre,calle:it.calle,ts:it.ts}),
+    remove: id=>col.doc(id).delete()
+  };
+  col.onSnapshot(snap=>{
+    clearTimeout(timer);
+    items = snap.docs.map(d=>({id:d.id,...d.data()}));
+    $('status').textContent='Guardado automáticamente.';
+    render();
+  }, ()=>{ clearTimeout(timer); store=localStore(); render(); });
+})();
+</script>
