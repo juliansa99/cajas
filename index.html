@@ -149,9 +149,7 @@ function showAlert(dups, item){
 
 async function commit(item){
   $('alert').hidden=true; pendingDup=null; highlight=null;
-  const n = nextNumber();
-  if(n===null) return;
-  item.n = n; item.id = item.id || ('c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)); item.ts = Date.now();
+  if(nextNumber()===null) return;
   try{ await store.save(item); $('f').reset(); $('nombre').focus(); }
   catch(e){ $('status').textContent='No se pudo guardar. Probá de nuevo.'; }
 }
@@ -169,35 +167,43 @@ $('f').addEventListener('submit', e=>{
 $('nombre').addEventListener('input',()=>{ if(pendingDup){ $('alert').hidden=true; pendingDup=null; highlight=null; render(); }});
 $('q').addEventListener('input',render);
 
-/* Storage: shared db if available, otherwise this browser only */
-function localStore(){
-  const K='cajas-101-v2';
-  const SEED=[[1,'Juli','Ofi'],[2,'Dami','Ofi'],[3,'Galo','Ofi'],[4,'Tomi','Ofi'],[5,'Fede','Ofi'],[6,'Braca','Ofi'],[7,'Leo','Ofi'],[8,'Ale Bufano','Libertador'],[9,'Pablo Colman','Goyena'],[10,'Fenix Manu Nico','Manuel Ugarte']]
-    .map(([n,nombre,calle])=>({id:'s'+n,n,nombre,calle,ts:1764100000000+n}));
-  try{ const raw=localStorage.getItem(K); items = raw===null ? SEED : JSON.parse(raw); }catch(e){ items=SEED; }
-  const persist=()=>{ try{localStorage.setItem(K,JSON.stringify(items))}catch(e){} render(); };
-  $('status').textContent='Guardado solo en este navegador.';
-  return { save: async it=>{ items.push(it); persist(); }, remove: async id=>{ items=items.filter(i=>i.id!==id); persist(); } };
+/* Storage: Supabase (REST). Publishable key, protegida por las reglas de la tabla. */
+const SB_URL='https://bcbseavoktidihqnmmwf.supabase.co/rest/v1/cajas_entregas';
+const SB_KEY='sb_publishable_WYlLutDOYB7awRmsnFpPGQ_x-3VUyQn';
+const H={apikey:SB_KEY,Authorization:'Bearer '+SB_KEY,'Content-Type':'application/json'};
+
+async function refresh(){
+  try{
+    const r=await fetch(SB_URL+'?select=id,n,nombre,calle,ts&order=ts.desc',{headers:H});
+    if(!r.ok) throw new Error(r.status);
+    items=await r.json();
+    $('status').textContent='Guardado en la nube. Se actualiza solo.';
+    render();
+  }catch(e){ $('status').textContent='Sin conexión. Reintentando…'; }
 }
 
-(async()=>{
-  store = localStore();            // usable immediately
-  render();
-  let db=null;
-  try{ db = await (window.claude && window.claude.use('db')); }catch(e){}
-  if(!db) return;
-  const col = db.collection('cajas');
-  let timer=setTimeout(()=>{ $('status').textContent='Guardado solo en este navegador.'; },10000);
-  $('status').textContent='Conectando…';
-  store = {
-    save: it=>col.doc(it.id).set({n:it.n,nombre:it.nombre,calle:it.calle,ts:it.ts}),
-    remove: id=>col.doc(id).delete()
-  };
-  col.onSnapshot(snap=>{
-    clearTimeout(timer);
-    items = snap.docs.map(d=>({id:d.id,...d.data()}));
-    $('status').textContent='Guardado automáticamente.';
-    render();
-  }, ()=>{ clearTimeout(timer); store=localStore(); render(); });
-})();
+store = {
+  async save(it){
+    for(let k=0;k<4;k++){
+      const n=nextNumber(); if(n===null) throw new Error('llenas');
+      const r=await fetch(SB_URL,{method:'POST',headers:{...H,Prefer:'return=minimal'},
+        body:JSON.stringify({n,nombre:it.nombre,calle:it.calle,ts:Date.now()})});
+      if(r.ok){ await refresh(); return; }
+      if(r.status===409){ await refresh(); continue; }   // otro dispositivo usó ese número
+      throw new Error(r.status);
+    }
+    throw new Error('conflicto');
+  },
+  async remove(id){
+    const r=await fetch(SB_URL+'?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:H});
+    if(!r.ok){ $('status').textContent='No se pudo borrar. Probá de nuevo.'; return; }
+    await refresh();
+  }
+};
+
+render();
+$('status').textContent='Conectando…';
+refresh();
+setInterval(()=>{ if(!document.hidden && !pendingDup) refresh(); },8000);
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refresh(); });
 </script>
